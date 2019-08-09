@@ -99,15 +99,9 @@ THREE.WEBVR = {
 
 				if ( currentSession === null ) {
 
-					// WebXR's requestReferenceSpace only works if the corresponding feature
-					// was requested at session creation time. For simplicity, just ask for
-					// the interesting ones as optional features, but be aware that the
-					// requestReferenceSpace call will fail if it turns out to be unavailable.
-					// ('local' is always available for immersive sessions and doesn't need to
-					// be requested separately.)
-
-					var sessionInit = { optionalFeatures: [ 'local-floor', 'bounded-floor' ] };
-					navigator.xr.requestSession( 'immersive-vr', sessionInit ).then( onSessionStarted );
+					var mode = options.mode || 'immersive-vr';
+					var sessionInit = options.sessionInit || {};
+					navigator.xr.requestSession( mode, sessionInit ).then( onSessionStarted );
 
 				} else {
 
@@ -176,7 +170,8 @@ THREE.WEBVR = {
 
 			stylizeElement( button );
 
-			navigator.xr.supportsSession( 'immersive-vr' ).then( showEnterXR ).catch( showXRNotFound );
+			var mode = options.mode || 'immersive-vr';
+			navigator.xr.supportsSession( mode ).then( showEnterXR ).catch( showXRNotFound );
 
 			return button;
 
