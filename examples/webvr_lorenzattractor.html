@@ -7,6 +7,13 @@
 		<link type="text/css" rel="stylesheet" href="main.css">
 		<!-- WebXR Device API (For Chrome M76+), expires 09/09/2019 -->
 		<meta http-equiv="origin-trial" content="Ai1/G787sugfmWtk1xQExa8N6OqwDsJyNn+OwpA1J4PozR1lixRYIQ4Tmp00vrGWS8FQQ2iDyqjwaewrOfYvPAUAAABTeyJvcmlnaW4iOiJodHRwczovL3RocmVlanMub3JnOjQ0MyIsImZlYXR1cmUiOiJXZWJYUkRldmljZU03NiIsImV4cGlyeSI6MTU2ODAyMzQ3OH0=">
+		<style type="text/css">
+			body .dg li.title,
+			body .dg li:not(.folder),
+			body .dg.main .close-button {
+				background-color: rgba(0, 0, 0, 0.5);
+			}
+		</style>
 	</head>
 	<body>
 
@@ -15,30 +22,49 @@
 		<script type="module">
 
 			import * as THREE from '../build/three.module.js';
+			import { GUI } from './jsm/libs/dat.gui.module.js';
 			import { WEBVR } from './jsm/vr/WebVR.js';
 
 			var camera, scene, renderer;
 			var attractor, light;
 
-			var x = 15 * Math.random();
-			var y = 15 * Math.random();
-			var z = 15 * Math.random();
+			var x, y, z;
 
-			var scale = .02; // for reducing overall displayed size
-			var speed = 5; // integer, increase for faster visualization
+			var scale = .01; // for reducing overall displayed size
 
 			var steps = 100000;
 			var current = 1;
 			var shown = 10000;
 
-			var beta = 8 / 3;
-			var rho = 28;
-			var sigma = 10;
+			var controller = {
+				beta: 8 / 3,
+				rho: 28,
+				sigma: 10,
+				speed: 5, // integer, increase for faster visualization
+				rotateX: 0, // autorotate around x
+				rotateY: 0, // autorotate around y
+				rotateZ: 0, // autorotate around z
+
+				dummy: function () {}
+			};
+
 
 			var dt = .005;
 
 			init();
 			animate();
+
+			function resetAttractor() {
+				x = 15 * Math.random();
+				y = 15 * Math.random();
+				z = 15 * Math.random();
+				var geometry = attractor.geometry;
+				for (var i = 0; i < shown; ++i) {
+					geometry.attributes.position.set(
+						[ scale * x, scale * y, scale * z ], i * 3 );
+				}
+				current = 1;
+			}
 
 			function draw() {
 
@@ -46,6 +72,10 @@
 
 				geometry.attributes.position.array.copyWithin( 3 );
 				geometry.attributes.color.array.copyWithin( 3 );
+
+				var beta = controller.beta;
+				var rho = controller.rho;
+				var sigma = controller.sigma;
 
 				if ( current < steps ) {
 
@@ -110,9 +140,10 @@
 				var material = new THREE.LineBasicMaterial( { vertexColors: THREE.VertexColors } );
 
 				attractor = new THREE.Line( geometry, material );
-				attractor.position.set( 0, 1.5, - 2 );
+				attractor.position.set( 0, 1.5, -1 );
 				attractor.frustumCulled = false; // critical to avoid blackouts!
 				scene.add( attractor );
+				resetAttractor();
 
 				//
 
@@ -125,7 +156,7 @@
 					new THREE.MeshPhongMaterial()
 				);
 				ground.geometry.rotateX( - 90 * Math.PI / 180 );
-				scene.add( ground );
+				//scene.add( ground );
 
 				//
 
@@ -133,14 +164,23 @@
 				renderer.setPixelRatio( window.devicePixelRatio );
 				renderer.setSize( window.innerWidth, window.innerHeight );
 				renderer.vr.enabled = true;
-				document.body.appendChild( renderer.domElement );
+				//document.body.appendChild( renderer.domElement );
 
-				document.body.appendChild( WEBVR.createButton( renderer ) );
+				document.body.appendChild( WEBVR.createButton(
+				    renderer, {
+					mode: 'immersive-ar',
+					referenceSpaceType: 'local-floor',
+					sessionInit: {optionalFeatures: ['dom-overlay-for-handheld-ar']}
+				}) );
+
+				renderer.vr.addEventListener('sessionstart',
+					function(ev) { console.log('sessionstart', ev); });
 
 				//
 
 				window.addEventListener( 'resize', onWindowResize, false );
 
+				setupGui();
 			}
 
 			function onWindowResize() {
@@ -160,16 +200,35 @@
 
 			function render() {
 
-				for ( var i = 0; i < speed; i ++ ) draw();
+				for ( var i = 0; i < controller.speed; i ++ ) draw();
 
 				attractor.geometry.attributes.position.needsUpdate = true;
 				attractor.geometry.attributes.color.needsUpdate = true;
-				attractor.rotation.z += .001;
+				attractor.rotation.x += controller.rotateX;
+				attractor.rotation.y += controller.rotateY;
+				attractor.rotation.z += controller.rotateZ;
 
 				renderer.render( scene, camera );
 
 			}
 
+		function setupGui() {
+			var gui = new GUI();
+			var h;
+
+			h = gui.addFolder( "Simulation" );
+
+			h.add( controller, "beta", -2, 10, 0.1 ).name( "beta" ).onChange(resetAttractor);
+			h.add( controller, "rho", 0, 50, 1 ).name( "rho" ).onChange(resetAttractor);
+			h.add( controller, "sigma", 0, 50, 1 ).name( "sigma" ).onChange(resetAttractor);
+			h.add( controller, "speed", 1, 100, 1 ).name( "speed" );
+			h.open();
+
+			h = gui.addFolder( "Display" );
+			h.add( controller, "rotateX", 0, 0.01, 0.001).name( "rotateX" );
+			h.add( controller, "rotateY", 0, 0.01, 0.001).name( "rotateY" );
+			h.add( controller, "rotateZ", 0, 0.01, 0.001).name( "rotateZ" );
+		}
 		</script>
 	</body>
 </html>
