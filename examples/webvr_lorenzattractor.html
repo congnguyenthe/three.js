@@ -140,7 +140,7 @@
 				var material = new THREE.LineBasicMaterial( { vertexColors: THREE.VertexColors } );
 
 				attractor = new THREE.Line( geometry, material );
-				attractor.position.set( 0, 1.5, -1 );
+				attractor.position.set( 0, 0, -1 );
 				attractor.frustumCulled = false; // critical to avoid blackouts!
 				scene.add( attractor );
 				resetAttractor();
@@ -169,7 +169,7 @@
 				document.body.appendChild( WEBVR.createButton(
 				    renderer, {
 					mode: 'immersive-ar',
-					referenceSpaceType: 'local-floor',
+					referenceSpaceType: 'local',
 					sessionInit: {optionalFeatures: ['dom-overlay-for-handheld-ar']}
 				}) );
 
