@@ -40,7 +40,7 @@
 				beta: 8 / 3,
 				rho: 28,
 				sigma: 10,
-				speed: 5, // integer, increase for faster visualization
+				speed: 200, // integer, increase for faster visualization
 				rotateX: 0, // autorotate around x
 				rotateY: 0, // autorotate around y
 				rotateZ: 0, // autorotate around z
@@ -137,7 +137,9 @@
 
 				geometry.addAttribute( 'color', new THREE.BufferAttribute( colors, 3 ) );
 
-				var material = new THREE.LineBasicMaterial( { vertexColors: THREE.VertexColors } );
+				var material = new THREE.LineBasicMaterial( {
+                                	vertexColors: THREE.VertexColors,
+					linewidth: 3 } );
 
 				attractor = new THREE.Line( geometry, material );
 				attractor.position.set( 0, 0, -1 );
@@ -221,7 +223,7 @@
 			h.add( controller, "beta", -2, 10, 0.1 ).name( "beta" ).onChange(resetAttractor);
 			h.add( controller, "rho", 0, 50, 1 ).name( "rho" ).onChange(resetAttractor);
 			h.add( controller, "sigma", 0, 50, 1 ).name( "sigma" ).onChange(resetAttractor);
-			h.add( controller, "speed", 1, 100, 1 ).name( "speed" );
+			h.add( controller, "speed", 1, 300, 1 ).name( "speed" );
 			h.open();
 
 			h = gui.addFolder( "Display" );
