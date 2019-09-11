@@ -75,8 +75,8 @@ var WEBVR = {
 			return newSessionInit;
 		}
 
-		function showEnterXR( /*device*/ ) {
-
+		function showEnterXR() {
+			let name = options.mode == 'immersive-vr' ? 'VR' : 'AR';
 			var currentSession = null;
 
 			function onSessionStarted( session ) {
@@ -84,7 +84,7 @@ var WEBVR = {
 				session.addEventListener( 'end', onSessionEnded );
 
 				renderer.vr.setSession( session );
-				button.textContent = 'EXIT XR';
+				button.textContent = 'EXIT ' + name;
 
 				currentSession = session;
 
@@ -95,7 +95,7 @@ var WEBVR = {
 				currentSession.removeEventListener( 'end', onSessionEnded );
 
 				renderer.vr.setSession( null );
-				button.textContent = 'ENTER XR';
+				button.textContent = 'ENTER ' + name;
 
 				currentSession = null;
 
@@ -106,10 +106,10 @@ var WEBVR = {
 			button.style.display = '';
 
 			button.style.cursor = 'pointer';
-			button.style.left = 'calc(50% - 50px)';
+			//button.style.left = 'calc(50% - 50px)';
 			button.style.width = '100px';
 
-			button.textContent = 'ENTER XR';
+			button.textContent = 'ENTER ' + name;
 
 			button.onmouseenter = function () {
 
