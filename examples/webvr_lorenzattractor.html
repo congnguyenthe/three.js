@@ -28,23 +28,30 @@
 			import * as THREE from '../build/three.module.js';
 			import { GUI } from './jsm/libs/dat.gui.module.js';
 			import { WEBVR } from './jsm/vr/WebVR.js';
+			import { GLTFLoader } from './jsm/loaders/GLTFLoader.js';
+			// FIXME: do orbit controls confuse AR mode? Can they be disabled while in AR?
+			//import { OrbitControls } from './jsm/controls/OrbitControls.js';
 
 			var camera, scene, renderer;
 			var attractor, light;
+			var controls;
+			var room;
 
 			var x, y, z;
 
-			var scale = .01; // for reducing overall displayed size
+			var scale = .02; // for reducing overall displayed size
 
 			var steps = 100000;
 			var current = 1;
 			var shown = 10000;
 
-			var controller = {
+			var config = {
 				beta: 8 / 3,
 				rho: 28,
 				sigma: 10,
 				speed: 200, // integer, increase for faster visualization
+				scale: 1,
+				z: 3,
 				rotateX: 0, // autorotate around x
 				rotateY: 0, // autorotate around y
 				rotateZ: 0, // autorotate around z
@@ -77,9 +84,9 @@
 				geometry.attributes.position.array.copyWithin( 3 );
 				geometry.attributes.color.array.copyWithin( 3 );
 
-				var beta = controller.beta;
-				var rho = controller.rho;
-				var sigma = controller.sigma;
+				var beta = config.beta;
+				var rho = config.rho;
+				var sigma = config.sigma;
 
 				if ( current < steps ) {
 
@@ -146,7 +153,7 @@
 					linewidth: 3 } );
 
 				attractor = new THREE.Line( geometry, material );
-				attractor.position.set( 0, 0, -1 );
+				attractor.position.set( 0, 0, -config.z );
 				attractor.frustumCulled = false; // critical to avoid blackouts!
 				scene.add( attractor );
 				resetAttractor();
@@ -165,12 +172,60 @@
 				//scene.add( ground );
 
 				//
+						var loader = new GLTFLoader().setPath( 'models/gltf/cube-room/' );
+						loader.load( 'cube-room.gltf', function ( gltf ) {
+
+							scene.add( gltf.scene );
+							room = gltf.scene;
+							room.position.y = -1.6;
+							//room.rotation.y = Math.PI / 2;
+
+						} );
+
+
+                                        var ambient = new THREE.AmbientLight( 0x222222 );
+                                        scene.add( ambient );
+
+                                        var directionalLight = new THREE.DirectionalLight( 0xdddddd, 1 );
+                                        directionalLight.position.set( 0.9, 1, 0.2 ).normalize();
+                                        scene.add( directionalLight );
+
+                                        var directionalLight2 = new THREE.DirectionalLight( 0xdddddd, 0.2 );
+                                        directionalLight2.position.set( -0.9, -1, -0.2 ).normalize();
+                                        scene.add( directionalLight2 );
+
+					/*
+                                        let spot1 = new THREE.SpotLight( 0xffffff, 1 );
+                                        spot1.position.set( 5, 10, 5 );
+                                        spot1.angle = 0.50;
+                                        spot1.penumbra = 0.75;
+                                        spot1.intensity = 100;
+                                        spot1.decay = 2;
+
+                                        if ( false ) {
+
+                                                spot1.castShadow = true;
+                                                spot1.shadow.bias = 0.0001;
+                                                spot1.shadow.mapSize.width = 2048;
+                                                spot1.shadow.mapSize.height = 2048;
+
+                                        }
+
+                                        scene.add( spot1 );
+					*/
 
 				renderer = new THREE.WebGLRenderer( { antialias: true } );
 				renderer.setPixelRatio( window.devicePixelRatio );
 				renderer.setSize( window.innerWidth, window.innerHeight );
 				renderer.vr.enabled = true;
-				//document.body.appendChild( renderer.domElement );
+				renderer.gammaOutput = true;
+				document.body.appendChild( renderer.domElement );
+
+				/*
+				controls = new OrbitControls( camera, renderer.domElement );
+				controls.target.set( 0, -0, -2 );
+				controls.update();
+				*/
 
 				let btnVR = WEBVR.createButton(
 				    renderer, {
@@ -196,11 +251,17 @@
 					function(ev) {
 						console.log('sessionstart', ev);
 						document.body.style.backgroundColor = 'rgba(0, 0, 0, 0)';
+						renderer.domElement.style.display = 'none';
+	  					if (renderer.vr.getSession().environmentBlendMode != 'opaque') {
+	  						room.visible = false;
+	  					}
 					});
 				renderer.vr.addEventListener('sessionend',
 					function(ev) {
 						console.log('sessionend', ev);
 						document.body.style.backgroundColor = '';
+						renderer.domElement.style.display = '';
+						room.visible = true;
 					});
 
 				//
@@ -227,13 +288,13 @@
 
 			function render() {
 
-				for ( var i = 0; i < controller.speed; i ++ ) draw();
+				for ( var i = 0; i < config.speed; i ++ ) draw();
 
 				attractor.geometry.attributes.position.needsUpdate = true;
 				attractor.geometry.attributes.color.needsUpdate = true;
-				attractor.rotation.x += controller.rotateX;
-				attractor.rotation.y += controller.rotateY;
-				attractor.rotation.z += controller.rotateZ;
+				attractor.rotation.x += config.rotateX;
+				attractor.rotation.y += config.rotateY;
+				attractor.rotation.z += config.rotateZ;
 
 				renderer.render( scene, camera );
 
@@ -245,16 +306,22 @@
 
 			h = gui.addFolder( "Simulation" );
 
-			h.add( controller, "beta", -2, 10, 0.1 ).name( "beta" ).onChange(resetAttractor);
-			h.add( controller, "rho", 0, 50, 1 ).name( "rho" ).onChange(resetAttractor);
-			h.add( controller, "sigma", 0, 50, 1 ).name( "sigma" ).onChange(resetAttractor);
-			h.add( controller, "speed", 1, 300, 1 ).name( "speed" );
+			h.add( config, "beta", -2, 10, 0.1 ).name( "beta" ).onChange(resetAttractor);
+			h.add( config, "rho", 0, 50, 1 ).name( "rho" ).onChange(resetAttractor);
+			h.add( config, "sigma", 0, 50, 1 ).name( "sigma" ).onChange(resetAttractor);
+			h.add( config, "speed", 1, 300, 1 ).name( "speed" );
 			h.open();
 
 			h = gui.addFolder( "Display" );
-			h.add( controller, "rotateX", 0, 0.01, 0.001).name( "rotateX" );
-			h.add( controller, "rotateY", 0, 0.01, 0.001).name( "rotateY" );
-			h.add( controller, "rotateZ", 0, 0.01, 0.001).name( "rotateZ" );
+			h.add( config, "scale", 0.5, 3, 0.1).name( "scale" ).onChange(() => {
+				attractor.scale.x = attractor.scale.y = attractor.scale.z = config.scale;
+			});
+			h.add( config, "z", 1, 4, 0.1).name( "distance" ).onChange(() => {
+				attractor.position.z = -config.z;
+			});
+			h.add( config, "rotateX", 0, 0.01, 0.001).name( "rotateX" );
+			h.add( config, "rotateY", 0, 0.01, 0.001).name( "rotateY" );
+			h.add( config, "rotateZ", 0, 0.01, 0.001).name( "rotateZ" );
 		}
 		</script>
 	</body>
