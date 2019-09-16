@@ -50,7 +50,7 @@ var WEBVR = {
 
 		function getXRSessionInit( mode, options) {
 			var space = (options || {}).referenceSpaceType || 'local-floor';
-			var sessionInit = options.sessionInit || {};
+			var sessionInit = (options && options.sessionInit) || {};
 
 			// Nothing to do for default features.
 			if ( space == 'viewer' )
@@ -72,11 +72,12 @@ var WEBVR = {
 			if ( sessionInit.requiredFeatures ) {
 				newInit.requiredFeatures = newInit.requiredFeatures.concat( sessionInit.requiredFeatures );
 			}
-			return newSessionInit;
+			return newInit;
 		}
 
 		function showEnterXR() {
-			let name = options.mode == 'immersive-vr' ? 'VR' : 'AR';
+			let name = 'VR';
+			if (options && options.mode == 'immersive-ar') name = 'AR';
 			var currentSession = null;
 
 			function onSessionStarted( session ) {
@@ -127,7 +128,7 @@ var WEBVR = {
 
 				if ( currentSession === null ) {
 
-					var mode = options.mode || 'immersive-vr';
+					var mode = (options && options.mode) || 'immersive-vr';
 					var sessionInit = getXRSessionInit( mode, options );
 					navigator.xr.requestSession( mode, sessionInit ).then( onSessionStarted );
 
@@ -198,7 +199,7 @@ var WEBVR = {
 
 			stylizeElement( button );
 
-			var mode = options.mode || 'immersive-vr';
+			var mode = (options && options.mode) || 'immersive-vr';
 			navigator.xr.supportsSession( mode ).then( showEnterXR ).catch( showXRNotFound );
 
 			return button;
