@@ -35,7 +35,7 @@
 			var camera, scene, renderer;
 			var attractor, light;
 			var controls;
-			var room;
+			var room = {}; // so that 'room.visible' can be set even if room isn't loaded yet
 
 			var x, y, z;
 
@@ -176,7 +176,10 @@
 						loader.load( 'cube-room.gltf', function ( gltf ) {
 
 							scene.add( gltf.scene );
+							let oldRoom = room;
 							room = gltf.scene;
+							// propagate old visibility, if any
+							if ('visible' in oldRoom) room.visible = oldRoom.visible;
 							room.position.y = -1.6;
 							//room.rotation.y = Math.PI / 2;
 
