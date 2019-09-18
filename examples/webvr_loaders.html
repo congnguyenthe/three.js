@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<title>three.js webvr - lorenz attractor</title>
+		<meta charset="utf-8">
+		<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+		<link type="text/css" rel="stylesheet" href="main.css">
+		<!-- WebXR Device API (For Chrome M76+), expires 09/09/2019 -->
+		<meta http-equiv="origin-trial" content="Ai1/G787sugfmWtk1xQExa8N6OqwDsJyNn+OwpA1J4PozR1lixRYIQ4Tmp00vrGWS8FQQ2iDyqjwaewrOfYvPAUAAABTeyJvcmlnaW4iOiJodHRwczovL3RocmVlanMub3JnOjQ0MyIsImZlYXR1cmUiOiJXZWJYUkRldmljZU03NiIsImV4cGlyeSI6MTU2ODAyMzQ3OH0=">
+		<style type="text/css">
+			body .dg li.title,
+			body .dg li:not(.folder),
+			body .dg.main .close-button {
+				background-color: rgba(0, 0, 0, 0.5);
+			}
+
+			body {
+				background-color: black;
+			}
+		</style>
+	</head>
+	<body>
+
+		<script src="js/vr/HelioWebXRPolyfill.js"></script>
+
+		<script type="module">
+
+			import * as THREE from '../build/three.module.js';
+			import { GUI } from './jsm/libs/dat.gui.module.js';
+			import { WEBVR } from './jsm/vr/WebVR.js';
+			import { GLTFLoader } from './jsm/loaders/GLTFLoader.js';
+			// FIXME: do orbit controls confuse AR mode? Can they be disabled while in AR?
+			import { OrbitControls } from './jsm/controls/OrbitControls.js';
+			import { ColladaLoader } from './jsm/loaders/ColladaLoader.js';
+
+			var camera, scene, renderer;
+			var light;
+			var controls;
+			var room = {}; // so that 'room.visible' can be set even if room isn't loaded yet
+			var modelGroup;
+
+			var clock, mixer;
+
+			var config = {
+				scale: 1,
+				z: 3,
+				dummy: function () {}
+			};
+
+
+			init();
+			animate();
+
+			function draw() {
+			}
+
+			function init() {
+				scene = new THREE.Scene();
+
+				camera = new THREE.PerspectiveCamera( 50, window.innerWidth / window.innerHeight, 0.1, 10 );
+
+				clock = new THREE.Clock();
+
+				// collada
+
+				var loader = new ColladaLoader();
+				loader.load( './models/collada/stormtrooper/stormtrooper.dae', function ( collada ) {
+
+					var animations = collada.animations;
+					var avatar = collada.scene;
+
+					avatar.traverse( function ( node ) {
+
+						if ( node.isSkinnedMesh ) {
+
+							node.frustumCulled = false;
+
+						}
+
+					} );
+
+					mixer = new THREE.AnimationMixer( avatar );
+					mixer.clipAction( animations[ 0 ] ).play();
+
+					let group = new THREE.Group();
+					group.add(avatar);
+					group.scale.x = group.scale.y = group.scale.z = 0.34;
+					group.rotation.y = Math.PI;
+					modelGroup.add(group);
+
+				} );
+
+
+				light = new THREE.PointLight( 0xffffff, 1 );
+				light.distance = 2;
+
+				var loader = new GLTFLoader().setPath( 'models/gltf/cube-room/' );
+				loader.load( 'cube-room.gltf', function ( gltf ) {
+
+					scene.add( gltf.scene );
+					let oldRoom = room;
+					room = gltf.scene;
+					// propagate old visibility, if any
+					if ('visible' in oldRoom) room.visible = oldRoom.visible;
+					room.position.y = -1.6;
+					//room.rotation.y = Math.PI / 2;
+
+				} );
+
+
+				var ambient = new THREE.AmbientLight( 0x222222 );
+				scene.add( ambient );
+
+				modelGroup = new THREE.Group;
+				modelGroup.scale.x = modelGroup.scale.y = modelGroup.scale.z = config.scale;
+				modelGroup.position.y = -1.6;
+				modelGroup.position.z = -config.z;
+				scene.add(modelGroup);
+
+				var directionalLight = new THREE.DirectionalLight( 0xdddddd, 1 );
+				directionalLight.position.set( 0.9, 1, 0.2 ).normalize();
+				scene.add( directionalLight );
+
+				var directionalLight2 = new THREE.DirectionalLight( 0xdddddd, 0.2 );
+				directionalLight2.position.set( -0.9, -1, -0.2 ).normalize();
+				scene.add( directionalLight2 );
+
+				renderer = new THREE.WebGLRenderer( { antialias: true } );
+				renderer.setPixelRatio( window.devicePixelRatio );
+				renderer.setSize( window.innerWidth, window.innerHeight );
+				renderer.vr.enabled = true;
+				renderer.gammaOutput = true;
+				document.body.appendChild( renderer.domElement );
+
+				controls = new OrbitControls( camera, renderer.domElement );
+				controls.screenSpacePanning = true;
+				controls.minDistance = 5;
+				controls.maxDistance = 40;
+				controls.target.set( 0, 2, 0 );
+				controls.update();
+				/*
+				controls = new OrbitControls( camera, renderer.domElement );
+				controls.target.set( 0, -0, -2 );
+				controls.update();
+				*/
+
+				let btnVR = WEBVR.createButton(
+				    renderer, {
+					mode: 'immersive-vr',
+					referenceSpaceType: 'local', // 'local-floor'
+					sessionInit: {//requiredFeatures: ['local-floor'],
+                                                      optionalFeatures: ['dom-overlay-for-handheld-ar']}
+				});
+				btnVR.style.left = 'calc(50% - 110px)';
+				document.body.appendChild(btnVR);
+
+				let btnAR = WEBVR.createButton(
+				    renderer, {
+					mode: 'immersive-ar',
+					referenceSpaceType: 'local', // 'local-floor'
+					sessionInit: {//requiredFeatures: ['local-floor'],
+                                                      optionalFeatures: ['dom-overlay-for-handheld-ar']}
+				});
+				btnAR.style.left = 'calc(50% + 10px)';
+				document.body.appendChild(btnAR);
+
+				renderer.vr.addEventListener('sessionstart',
+					function(ev) {
+						console.log('sessionstart', ev);
+						document.body.style.backgroundColor = 'rgba(0, 0, 0, 0)';
+						renderer.domElement.style.display = 'none';
+	  					if (renderer.vr.getSession().environmentBlendMode != 'opaque') {
+	  						room.visible = false;
+	  					}
+					});
+				renderer.vr.addEventListener('sessionend',
+					function(ev) {
+						console.log('sessionend', ev);
+						document.body.style.backgroundColor = '';
+						renderer.domElement.style.display = '';
+						room.visible = true;
+					});
+
+				//
+
+				window.addEventListener( 'resize', onWindowResize, false );
+
+				setupGui();
+			}
+
+			function onWindowResize() {
+
+				camera.aspect = window.innerWidth / window.innerHeight;
+				camera.updateProjectionMatrix();
+
+				renderer.setSize( window.innerWidth, window.innerHeight );
+
+			}
+
+			function animate() {
+				renderer.setAnimationLoop( render );
+			}
+
+			function render() {
+				var delta = clock.getDelta();
+
+				if ( mixer !== undefined ) {
+
+					mixer.update( delta );
+
+				}
+
+				renderer.render( scene, camera );
+			}
+
+		function setupGui() {
+			var gui = new GUI();
+			var h;
+
+			h = gui.addFolder( "Display" );
+			h.add( config, "scale", 0.5, 3, 0.1).name( "scale" ).onChange(() => {
+				modelGroup.scale.x = modelGroup.scale.y = modelGroup.scale.z = config.scale;
+			});
+			h.add( config, "z", 1, 4, 0.1).name( "distance" ).onChange(() => {
+				modelGroup.position.z = -config.z;
+			});
+			h.open();
+		}
+
+/*
+			function init() {
+
+				container = document.getElementById( 'container' );
+
+				camera = new THREE.PerspectiveCamera( 25, window.innerWidth / window.innerHeight, 1, 1000 );
+				camera.position.set( 15, 10, - 15 );
+
+				scene = new THREE.Scene();
+
+				var gridHelper = new THREE.GridHelper( 10, 20 );
+				scene.add( gridHelper );
+
+				var ambientLight = new THREE.AmbientLight( 0xffffff, 0.2 );
+				scene.add( ambientLight );
+
+				var pointLight = new THREE.PointLight( 0xffffff, 0.8 );
+				scene.add( camera );
+				camera.add( pointLight );
+
+				renderer = new THREE.WebGLRenderer( { antialias: true } );
+				renderer.setPixelRatio( window.devicePixelRatio );
+				renderer.setSize( window.innerWidth, window.innerHeight );
+				container.appendChild( renderer.domElement );
+
+				controls = new OrbitControls( camera, renderer.domElement );
+				controls.screenSpacePanning = true;
+				controls.minDistance = 5;
+				controls.maxDistance = 40;
+				controls.target.set( 0, 2, 0 );
+				controls.update();
+
+				stats = new Stats();
+				container.appendChild( stats.dom );
+
+				window.addEventListener( 'resize', onWindowResize, false );
+
+			}
+*/
+
+		</script>
+	</body>
+</html>
