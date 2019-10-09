@@ -118,6 +118,12 @@ function WebXRManager( renderer, gl ) {
 
 	};
 
+	this.setReferenceSpace = function ( value ) {
+
+		referenceSpace = value;
+
+	};
+
 	this.getSession = function () {
 
 		return session;
@@ -135,7 +141,9 @@ function WebXRManager( renderer, gl ) {
 			session.addEventListener( 'selectend', onSessionEvent );
 			session.addEventListener( 'end', onSessionEnd );
 
-			session.updateRenderState( { baseLayer: new XRWebGLLayer( session, gl ) } );
+			session.updateRenderState( { baseLayer: new XRWebGLLayer( session, gl, {
+                                 framebufferScaleFactor: framebufferScaleFactor
+                            } ) } );
 
 			session.requestReferenceSpace( referenceSpaceType ).then( onRequestReferenceSpace );
 
