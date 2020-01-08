@@ -235,7 +235,8 @@
 					mode: 'immersive-vr',
 					referenceSpaceType: 'local', // 'local-floor'
 					sessionInit: {//requiredFeatures: ['local-floor'],
-                                                      optionalFeatures: ['dom-overlay-for-handheld-ar']}
+                                                      optionalFeatures: ['dom-overlay', 'dom-overlay-for-handheld-ar'],
+                                                      domOverlay: {root: document.body}}
 				});
 				btnVR.style.left = 'calc(50% - 110px)';
 				document.body.appendChild(btnVR);
@@ -245,7 +246,9 @@
 					mode: 'immersive-ar',
 					referenceSpaceType: 'local', // 'local-floor'
 					sessionInit: {//requiredFeatures: ['local-floor'],
-                                                      optionalFeatures: ['dom-overlay-for-handheld-ar']}
+                                                      optionalFeatures: ['dom-overlay', 'dom-overlay-for-handheld-ar'],
+                                                      domOverlay: {root: document.body}
+                                        }
 				});
 				btnAR.style.left = 'calc(50% + 10px)';
 				document.body.appendChild(btnAR);
